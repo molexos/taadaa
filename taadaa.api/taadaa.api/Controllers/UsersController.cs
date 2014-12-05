@@ -98,7 +98,15 @@ namespace taadaa.api.Controllers
             db.Users.Add(user);
             await db.SaveChangesAsync();
 
-            return CreatedAtRoute("DefaultApi", new { id = user.Id }, user);
+            var dto = new UserDTO()
+            {
+                id = user.Id,
+                name = user.Name,
+                email = user.Email,
+                username = user.UserName
+            };
+
+            return CreatedAtRoute("DefaultApi", new { id = user.Id }, dto);
         }
 
         // DELETE api/Users/5

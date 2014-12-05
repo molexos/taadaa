@@ -9,22 +9,35 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
+using taadaa.api.DTO;
 using taadaa.api.Models;
 
 namespace taadaa.api.Controllers
 {
+    [RoutePrefix("tasklists")]
     public class TodoListsController : ApiController
     {
         private TaadaaContext db = new TaadaaContext();
 
-        // GET api/TodoLists
-        public IQueryable<TodoList> GetTodoLists()
+        #region Tasklist management
+
+        // GET /taklists
+        [Route("")]
+        [HttpGet]
+        public IQueryable<TodoListDTO> GetTodoLists()
         {
-            return db.TodoLists;
+            return db.TodoLists.Include(x => x.Tasks).Select(
+                domain => new TodoListDTO()
+                {
+                    id = domain.Id,
+                    name = domain.Name
+                });
         }
 
-        // GET api/TodoLists/5
-        [ResponseType(typeof(TodoList))]
+        // GET /taklists/5
+        [Route("{id:int}")]
+        [HttpGet]
+        [ResponseType(typeof(TodoListDTO))]
         public async Task<IHttpActionResult> GetTodoList(int id)
         {
             TodoList todolist = await db.TodoLists.FindAsync(id);
@@ -32,11 +45,15 @@ namespace taadaa.api.Controllers
             {
                 return NotFound();
             }
-
-            return Ok(todolist);
+          
+            db.Entry(todolist).Collection(x => x.Tasks).Load();
+            
+            return Ok(new TodoListDTO(todolist));
         }
 
-        // PUT api/TodoLists/5
+        // PUT tasklists/5
+        [Route("{id:int}")]
+        [HttpPut]
         public async Task<IHttpActionResult> PutTodoList(int id, TodoList todolist)
         {
             if (!ModelState.IsValid)
@@ -70,7 +87,9 @@ namespace taadaa.api.Controllers
             return StatusCode(HttpStatusCode.NoContent);
         }
 
-        // POST api/TodoLists
+        // POST tasklists
+        [Route("")]
+        [HttpPost]
         [ResponseType(typeof(TodoList))]
         public async Task<IHttpActionResult> PostTodoList(TodoList todolist)
         {
@@ -85,7 +104,9 @@ namespace taadaa.api.Controllers
             return CreatedAtRoute("DefaultApi", new { id = todolist.Id }, todolist);
         }
 
-        // DELETE api/TodoLists/5
+        // DELETE tasklists/5
+        [Route("{id:int}")]
+        [HttpDelete]
         [ResponseType(typeof(TodoList))]
         public async Task<IHttpActionResult> DeleteTodoList(int id)
         {
@@ -101,6 +122,26 @@ namespace taadaa.api.Controllers
             return Ok(todolist);
         }
 
+        #endregion
+
+        #region Task management
+
+        [Route("{id:int}/tasks")]
+        [ResponseType(typeof(IQueryable<TodoDTO>))]
+        public async Task<IHttpActionResult> GetTasks(int id)
+        {
+            var todolist = await db.TodoLists.Include(x => x.Tasks).FirstOrDefaultAsync<TodoList>(x => x.Id == id);
+            if (todolist == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(todolist.Tasks.Select(x => new TodoDTO { id = x.Id, description = x.Description, done = x.IsDone, notes = x.Notes }));
+        }
+
+        #endregion
+
+        #region Private
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -114,5 +155,7 @@ namespace taadaa.api.Controllers
         {
             return db.TodoLists.Count(e => e.Id == id) > 0;
         }
+
+        #endregion
     }
 }
