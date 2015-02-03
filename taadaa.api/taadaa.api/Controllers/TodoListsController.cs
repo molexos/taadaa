@@ -6,6 +6,7 @@ using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
@@ -21,16 +22,17 @@ namespace taadaa.api.Controllers
 
         #region Tasklist management
 
-        // GET /taklists
+        // GET /tasklists
         [Route("")]
         [HttpGet]
+        [Authorize]
         public IQueryable<TodoListDTO> GetTodoLists()
         {
-            return db.TodoLists.Include(x => x.Tasks).Select(
+            //var user = Request.GetRequestContext().Principal as ClaimsPrincipal;
+            return db.TodoLists.Select(
                 domain => new TodoListDTO()
                 {
-                    id = domain.Id,
-                    name = domain.Name
+                    id = domain.Id
                 });
         }
 
